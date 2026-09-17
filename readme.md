@@ -1,4 +1,4 @@
-# CAPS: How-Much Provenance for Streaming Dataflows
+# How-Much Provenance for Streaming Dataflows
 
 CAPS is a lightweight provenance mechanism that reports how much each source contributed to an output: how many taxi trips
 from each borough are behind an hourly traffic report, for example. It asks the
@@ -138,9 +138,9 @@ run.sh              sets everything up, runs every experiment, prints
 
 The four dataflows are `taxi_1`, `taxi_2`, `nexmark_1` and `nexmark_2`, four of
 the six of Figure 9 of the paper. The two missing ones, `twitter_1` and
-`twitter_2`, read the X/Twitter dataset, which cannot be redistributed for
-privacy reasons, so the artifact ships only the dataflows whose input anyone can
-rebuild from public data. `taxi_1` is the dataflow of the introduction figure:
+`twitter_2`, run on a proprietary Twitter dataset that cannot be shipped, so the
+artifact ships only the dataflows whose input anyone can rebuild from public
+data. `taxi_1` is the dataflow of the introduction figure:
 two virtual sources (Manhattan and Queens pickups) times two branches (solo and
 crowded rides) give four how-much channels, one per path.
 
@@ -155,8 +155,10 @@ only.
 ## Datasets
 
 Nothing under `data/` is shipped; each directory holds the scripts that build
-its input, and each has a README with the details. `./run.sh` invokes these for
-you, but they can also be run on their own:
+its input. `data/taxis/README.txt` says which archive the taxi files come from
+and why that release rather than the current official one; `generate_nexmark.py`
+documents its parameters and its output format in its docstring. `./run.sh`
+invokes both for you, but they can also be run on their own:
 
 ```bash
 cd data/nexmark && python3 generate_nexmark.py
@@ -258,4 +260,51 @@ python3 experiments/plot_utils.py experiments/queries
 paper has are drawn.
 
 Timed runs are repeated `REPS` times and the median is what the paper reports;
-`times_stats.csv` carries
+`times_stats.csv` carries the repetition count, the mean and the standard
+deviation beside it.
+
+Every entry is produced for the four dataflows above, which is the `taxi_1`,
+`taxi_2`, `nexmark_1` and `nexmark_2` part of each table and figure. The
+`twitter_1` and `twitter_2` part is not: no script here can produce it, since
+that input is proprietary. Figure 13 is the `paths` experiment and comes
+out for `taxi_1` alone, the only dataflow here with more paths than sources.
+
+`how_much/memory_model.csv` is the meta-data each method must retain to answer a
+query later: for CAPS and Green the annotations at the sink, for GeneaLog the
+whole contribution graph, which it keeps at every operator. It is an analytical
+count, not a measurement, and not peak process memory. `memory/metadata_volume.csv`
+is a different quantity, the annotation bytes that passed through the operators
+over the whole run, measured with Flink accumulator probes; the two must not be
+mixed in one comparison.
+
+## Tests
+
+Every library module carries a JUnit suite, 103 tests in total, which the
+experiments skip (`-DskipTests`) but which can be run on their own:
+
+```bash
+for m in temporal_index caps inkstream genealog query_jmh; do
+  (cd code/$m && mvn test)
+done
+```
+
+They cover the pieces a result depends on and that a run cannot check for you:
+that each dataflow attaches exactly the probes its operator set declares and
+attaches each one once, that the probe CSV is canonical and refuses to be
+written twice, that the shared-identifier query fixture holds the same 1,000
+outputs for all three methods, that a GeneaLog graph survives cloning and its
+traversal answers match the counters, and that the JMH harness keeps the
+annotations that make its numbers meaningful.
+
+## Offline query tool
+
+`caps.Main` loads a CAPS sink file into the index after the fact, for
+inspecting provenance outside a run:
+
+```bash
+java -cp code/caps/target/classes caps.Main <sink.out> <channels> \
+    query <ts> <te>
+```
+
+`delta`, `bench` and `selftest` are also accepted; `selftest` checks the
+examples of Figure 5 of the paper.
