@@ -31,16 +31,11 @@ against, and one script per table and figure of the paper.
 - 15 GB of free disk: 9.4 GB of it is the taxi archive and its extraction,
   which can be deleted once `data/taxis/taxis.txt` exists.
 
-A full `./run.sh` takes hours, most of it downloading: archive.org throttles the
-taxi files, and `install_flink.sh` allows up to two hours for the Flink tarball
-alone (raise `FLINK_DOWNLOAD_MINUTES` if your link is slower). Both resume, so
-an interrupted run continues where it stopped.
-
-Everything else is fetched by `./run.sh`: it installs Flink 1.10 into
-`code/flink-1.10.0` and builds the two input datasets before running the
-experiments, skipping whichever steps are already done. Flink 1.10 is the
-version GeneaLog was developed on, which is why the comparison uses it; point
-`FLINK_DIR` at an existing installation to use your own.
+Nothing else has to be installed by hand: `./run.sh` fetches Flink and builds
+the inputs itself, as described under Run. Flink 1.10 is the version GeneaLog
+was developed on, which is why the comparison uses it; point `FLINK_DIR` at an
+existing Flink 1.10 to use your own, and raise `FLINK_DOWNLOAD_MINUTES` above
+its default of 120 if your link is slow.
 
 ## macOS
 
@@ -174,14 +169,44 @@ numbers.
 
 ## Run
 
-Everything, on all four dataflows, from a fresh checkout:
+One command, from the root of the repository, does everything:
 
 ```bash
-pip install -r requirements.txt
 ./run.sh
 ```
 
-One experiment, in the order `run.sh` uses:
+It needs no arguments and no prior setup beyond the requirements above. In
+order, it installs Flink 1.10 into `code/flink-1.10.0`, creates `venv/` and
+installs `requirements.txt` into it, builds the Nexmark and taxi inputs, then
+runs the eight experiments, each of which builds the four versions of every
+dataflow and runs them. Every step is skipped when its output is already in
+place, so an interrupted run continues where it stopped and a second run is
+cheap.
+
+Expect hours, most of it downloading: the taxi archive is 4 GB from a throttled
+mirror, and the Flink tarball is allowed up to two hours on its own.
+
+Start smaller. Nexmark is generated locally, so this exercises the whole
+pipeline end to end in a few minutes with nothing to download:
+
+```bash
+DATAFLOWS=nexmark_2 REPS=1 ./run.sh
+```
+
+It is the same script and the same outputs, on one dataflow instead of four and
+one timed repetition instead of three. When it finishes,
+`experiments/how_much/nexmark_2/times.csv` holds one row per method, which is
+the sign that Java, Maven, Flink and Python are all in order. Then drop the
+variables and run the whole thing.
+
+```text
+DATAFLOWS    which dataflows to run                 default: all four
+REPS         timed repetitions, median reported     default: 3
+```
+
+Each experiment is also a script of its own, and any single one can be run
+without the others. These are the eight, in the order `./run.sh` calls them;
+run one, not the list:
 
 ```bash
 ./experiments/how_much/run.sh
@@ -194,11 +219,14 @@ One experiment, in the order `run.sh` uses:
 ./experiments/paths/run.sh
 ```
 
-A subset of dataflows:
+The same variables apply:
 
 ```bash
-DATAFLOWS="taxi_1 nexmark_2" ./experiments/queries/run.sh
+DATAFLOWS="taxi_1 nexmark_2" REPS=1 ./experiments/queries/run.sh
 ```
+
+`paths` runs on `taxi_1` alone, the only dataflow here with more paths than
+sources; given any other it says so and stops.
 
 Each experiment writes one result directory per dataflow and a combined CSV at
 the experiment level with a leading `dataflow` column. Only the five figures the
@@ -215,7 +243,7 @@ python3 experiments/plot_utils.py experiments/queries
 | -------------- | ------------------------------------------------ | --------------------------------- | -------------------------- |
 | `how_much`     | `times.csv`, `times_stats.csv`                   | `how_much_runtime_bar.pdf`        | Figure 10 (top)            |
 | `how_much`     | `query_ns.csv`                                   | table only                        | Table 2, in-situ timing    |
-| `how_much`     | `memory_model.csv`, `memory_model_detail.csv`    | `how_much_memory_model_bar.pdf`   | Figure 10 (bottom)         |
+| `how_much`     | `memory_model.csv`                               | `how_much_memory_model_bar.pdf`   | Figure 10 (bottom)         |
 | `memory`       | `metadata_volume.csv`, `how_much_comparison.csv` | table only                        | Measured meta-data volume  |
 | `query_table`  | `query_table.csv`                                | table only                        | Per-output query time, JMH |
 | `queries`      | `query_latency.csv`                              | `queries_query_latency_bar.pdf`   | Figure 11                  |
@@ -230,62 +258,4 @@ python3 experiments/plot_utils.py experiments/queries
 paper has are drawn.
 
 Timed runs are repeated `REPS` times and the median is what the paper reports;
-`times_stats.csv` carries the repetition count, the mean and the standard
-deviation beside it.
-
-Every entry is produced for the four dataflows above, which is the `taxi_1`,
-`taxi_2`, `nexmark_1` and `nexmark_2` part of each table and figure. The
-`twitter_1` and `twitter_2` part is not: no script here can produce it, because
-the input cannot be redistributed. Figure 13 is the `paths` experiment and comes
-out for `taxi_1` alone, the only dataflow here with more paths than sources.
-
-There are two different memory numbers and they must not be mixed in one
-comparison:
-
-- `how_much/memory_model.csv` is the **analytical** model of Section 7.2.1 and
-  the number the paper reports (Figure 10, bottom): each method is charged the
-  meta-data it must retain to answer a query, so CAPS pays
-  `#outputs x #channels x 8` at the sink while GeneaLog pays 32 B on every
-  operator output, because it keeps the whole contribution graph.
-  `how_much/memory_model_detail.csv` splits this into `sink_bytes` (retained)
-  and `intermediate_bytes` / `window_state_bytes` (live).
-- `memory/metadata_volume.csv` is the **measured** cross-check: Flink
-  accumulator probes at every operator output that carries the method's
-  annotation, summed over the run.
-
-Neither is peak process memory. A comparison must take all methods from the same
-file: the two disagree by up to an order of magnitude (on `taxi_1` CAPS is 150 MB
-by the model and 1430 MB by the probes, because the model charges only what is
-retained while the probes charge everything that passed through).
-
-## Tests
-
-Every library module carries a JUnit suite, 103 tests in total, which the
-experiments skip (`-DskipTests`) but which can be run on their own:
-
-```bash
-for m in temporal_index caps inkstream genealog query_jmh; do
-  (cd code/$m && mvn test)
-done
-```
-
-They cover the pieces a result depends on and that a run cannot check for you:
-that each dataflow attaches exactly the probes its operator set declares and
-attaches each one once, that the probe CSV is canonical and refuses to be
-written twice, that the shared-identifier query fixture holds the same 1,000
-outputs for all three methods, that a GeneaLog graph survives cloning and its
-traversal answers match the counters, and that the JMH harness keeps the
-annotations that make its numbers meaningful.
-
-## Offline query tool
-
-`caps.Main` loads a CAPS sink file into the index after the fact, for
-inspecting provenance outside a run:
-
-```bash
-java -cp code/caps/target/classes caps.Main <sink.out> <channels> \
-    query <ts> <te>
-```
-
-`delta`, `bench` and `selftest` are also accepted; `selftest` checks the
-examples of Figure 5 of the paper.
+`times_stats.csv` carries
