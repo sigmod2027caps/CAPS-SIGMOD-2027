@@ -1,26 +1,29 @@
-How-Much Provenance for Streaming Dataflows
-===========================================
+# How-Much Provenance for Streaming Dataflows
 
-Abstract
---------
-Streaming dataflows transform tuples from a set of sources into outputs at a
-set of sinks. We propose how-much provenance, which reports how much data each
-source contributed to an output tuple, or to all tuples that a sink produced
-during a time window; e.g., how many taxi trips from each borough support an
-hourly traffic report. Such answers directly serve monitoring, debugging, and
-auditing, and require no tuple-level tracking: we instrument operators to
-produce and propagate aggregates whose size is bounded by the number of sources
-and processing paths of the dataflow, for each item that reaches a sink. The
-model extends to virtual sources, which split a source by ad-hoc filtering or
-classification of its tuples. Since sink outputs accumulate over time, we also
-define versioning, which contracts the contribution of a source across
-consecutive windows, and design a temporal index that stores provenance
-meta-data as prefix sums and answers time-range queries in logarithmic time,
-with or without expiration of old meta-data. Experiments on two real-world
-datasets (NYC taxi trips and Twitter/X) and the Nexmark benchmark show that our
-approach adds negligible overhead to the dataflow and answers how-much
-provenance queries orders of magnitude faster than fine-grained provenance
-systems.
+CAPS reports how much each source contributed to an output: how many taxi trips
+from each borough are behind an hourly traffic report, for example. It asks the
+same question of a whole time window, not just a single output tuple.
+
+It does this without tracking individual tuples. Every record carries one
+counter per channel, so the annotation is the size of the dataflow and not of
+the data, and an index over the output timestamps answers queries over a time
+range in logarithmic time.
+
+This repository holds the implementation, the three baselines it is compared
+against, and one script per table and figure of the paper.
+
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Repository layout](#repository-layout)
+- [Dataflows](#dataflows)
+- [Methods](#methods)
+- [Datasets](#datasets)
+- [Running the experiments](#running-the-experiments)
+- [Results and where they are reported](#results-and-where-they-are-reported)
+- [Memory](#memory)
+- [Tests](#tests)
+- [Offline query tool](#offline-query-tool)
+- [Troubleshooting](#troubleshooting)
 
 Requirements
 ------------
