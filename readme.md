@@ -1,4 +1,4 @@
-# How-Much Provenance for Streaming Dataflows
+# CAPS: How-Much Provenance for Streaming Dataflows
 
 CAPS is a lightweight provenance mechanism that reports how much each source contributed to an output: how many taxi trips
 from each borough are behind an hourly traffic report, for example. It asks the
