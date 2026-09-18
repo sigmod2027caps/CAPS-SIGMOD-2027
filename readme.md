@@ -13,8 +13,14 @@ range in logarithmic time.
 This repository holds the implementation, the three baselines it is compared
 against, and one script per table and figure of the paper.
 
-Requirements
-------------
+## Before running the experiments
+
+```bash
+chmod +x run.sh install_flink.sh experiments/*/run.sh data/taxis/download.sh
+```
+
+#Requirements
+
   - Linux. The scripts use the GNU forms of `stat` and `sha512sum` and need
     bash 4, so they do not run on macOS as they are; see macOS below.
   - Java 8 (OpenJDK 8). Flink 1.10 does not run on newer JDKs. `JAVA_HOME`
@@ -38,8 +44,8 @@ was developed on, which is why the comparison uses it; point `FLINK_DIR` at an
 existing Flink 1.10 to use your own, and raise `FLINK_DOWNLOAD_MINUTES` above
 its default of 120 if your link is slow.
 
-macOS
------
+#macOS
+
 macOS ships bash 3.2, which has no associative arrays, and the BSD forms of
 `stat` and `sha512sum`. There are two ways around that.
 
@@ -144,8 +150,8 @@ GeneaLog version lives inside `code/genealog`. The `how_much`, `memory`,
 side by side; `expiry` and `summarize` concern the index alone and run CAPS
 only.
 
-Datasets
---------
+#Datasets
+
 Nothing under `data/` is shipped; each directory holds the scripts that build
 its input, and each has a README with the details. `./run.sh` invokes these for
 you, but they can also be run on their own:
@@ -157,8 +163,8 @@ The nexmark generator is seeded and the taxi pipeline is deterministic over a
 frozen 2013 archive snapshot, so both reproduce the inputs behind the paper's
 numbers.
 
-Run
----
+#Run
+
 One command, from the root of the repository, does everything:
 
     ./run.sh
@@ -215,8 +221,8 @@ Figures can be regenerated on their own from results that already exist:
 
     python3 experiments/plot_utils.py experiments/queries
 
-Results and where they are reported
------------------------------------
+#Results and where they are reported
+
 
 | Experiment     | CSV                                              | Figure                            | Reported as                |
 | -------------- | ------------------------------------------------ | --------------------------------- | -------------------------- |
@@ -256,17 +262,9 @@ comparison:
     operator output, because it keeps the whole contribution graph.
     `how_much/memory_model_detail.csv` splits this into `sink_bytes` (retained)
     and `intermediate_bytes` / `window_state_bytes` (live).
-  - `memory/metadata_volume.csv` is the **measured** cross-check: Flink
-    accumulator probes at every operator output that carries the method's
-    annotation, summed over the run.
 
-Neither is peak process memory. A comparison must take all methods from the same
-file: the two disagree by up to an order of magnitude (on `taxi_1` CAPS is 150 MB
-by the model and 1430 MB by the probes, because the model charges only what is
-retained while the probes charge everything that passed through).
+#Tests
 
-Tests
------
 Every library module carries a JUnit suite, 103 tests in total, which the
 experiments skip (`-DskipTests`) but which can be run on their own:
 
@@ -282,13 +280,4 @@ outputs for all three methods, that a GeneaLog graph survives cloning and its
 traversal answers match the counters, and that the JMH harness keeps the
 annotations that make its numbers meaningful.
 
-Offline query tool
-------------------
-`caps.Main` loads a CAPS sink file into the index after the fact, for
-inspecting provenance outside a run:
 
-    java -cp code/caps/target/classes caps.Main <sink.out> <channels> \
-        query <ts> <te>
-
-`delta`, `bench` and `selftest` are also accepted; `selftest` checks the
-examples of Figure 5 of the paper.
