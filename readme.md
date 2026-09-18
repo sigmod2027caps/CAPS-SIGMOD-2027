@@ -1,5 +1,5 @@
 CAPS: How-Much Provenance for Streaming Dataflows
-
+-----------------
 
 CAPS is a lightweight provenance mechanism that reports how much each source contributed to an output: how many taxi trips
 from each borough are behind an hourly traffic report, for example. It asks the
@@ -19,8 +19,8 @@ against, and one script per table and figure of the paper.
 chmod +x run.sh install_flink.sh experiments/*/run.sh data/taxis/download.sh
 ```
 
-#Requirements
-
+Requirements
+-----------------
   - Linux. The scripts use the GNU forms of `stat` and `sha512sum` and need
     bash 4, so they do not run on macOS as they are; see macOS below.
   - Java 8 (OpenJDK 8). Flink 1.10 does not run on newer JDKs. `JAVA_HOME`
@@ -44,8 +44,8 @@ was developed on, which is why the comparison uses it; point `FLINK_DIR` at an
 existing Flink 1.10 to use your own, and raise `FLINK_DOWNLOAD_MINUTES` above
 its default of 120 if your link is slow.
 
-#macOS
-
+macOS
+-----------------
 macOS ships bash 3.2, which has no associative arrays, and the BSD forms of
 `stat` and `sha512sum`. There are two ways around that.
 
@@ -163,7 +163,8 @@ The nexmark generator is seeded and the taxi pipeline is deterministic over a
 frozen 2013 archive snapshot, so both reproduce the inputs behind the paper's
 numbers.
 
-#Run
+Run
+-----------------
 
 One command, from the root of the repository, does everything:
 
@@ -221,8 +222,8 @@ Figures can be regenerated on their own from results that already exist:
 
     python3 experiments/plot_utils.py experiments/queries
 
-#Results and where they are reported
-
+Results and where they are reported
+-----------------
 
 | Experiment     | CSV                                              | Figure                            | Reported as                |
 | -------------- | ------------------------------------------------ | --------------------------------- | -------------------------- |
@@ -263,7 +264,8 @@ comparison:
     `how_much/memory_model_detail.csv` splits this into `sink_bytes` (retained)
     and `intermediate_bytes` / `window_state_bytes` (live).
 
-#Tests
+Tests
+-----------------
 
 Every library module carries a JUnit suite, 103 tests in total, which the
 experiments skip (`-DskipTests`) but which can be run on their own:
