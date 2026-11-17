@@ -1,3 +1,0 @@
-# Nested paths
-Tests CAPS on 3 levels of 8-way multiplexes (512 leaf paths) recombined by one windowed join, declaring 8, 64 or 512 path channels (channel = path mod M). Reports runtime / No Prov, retained MB (8 B x outputs x M), per-output query ns. Run: `experiments/nested_paths/run.sh` (`SMALL=1` for a quick check, `PHASES=plot` to redraw); results in `results/nested.csv`, `results/nested.pdf`.
-Takeaway: outputs verified against an oracle; runtime 1.10x / 0.99x / 1.11x of No Prov for 8 / 64 / 512 channels (median of 3; within run-to-run noise of about 10%), retained meta-data 2.2 / 17 / 139 MB, total query 2.9 / 11 / 84 ns: cost grows with declared channels, not with the 512 physical paths.
